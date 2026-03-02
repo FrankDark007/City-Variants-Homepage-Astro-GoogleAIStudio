@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Dialog, DialogPanel } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon, BuildingOffice2Icon, EnvelopeIcon, PhoneIcon } from '@heroicons/react/24/outline'
+import { get, set } from 'idb-keyval';
 import { GeminiService } from './services/geminiService';
 
 declare global {
@@ -184,27 +185,38 @@ const FAQAccordion = ({ items }: { items: typeof faqs }) => {
   );
 };
 
-const GeneratedImage = ({ prompt, aspectRatio, className, fallback }: { prompt: string, aspectRatio: any, className?: string, fallback: string }) => {
+const GeneratedImage = ({ prompt, aspectRatio, className, fallback, onAuthError }: { prompt: string, aspectRatio: any, className?: string, fallback: string, onAuthError: () => void }) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     const fetchImage = async () => {
-      const cacheKey = `gen_img_${prompt.replace(/\s+/g, '_')}`;
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        setImageUrl(cached);
-        return;
+      const cacheKey = `gen_img_v3_${prompt.replace(/\s+/g, '_')}`;
+      try {
+        const cached = await get(cacheKey);
+        if (cached) {
+          setImageUrl(cached);
+          return;
+        }
+      } catch (err) {
+        console.error("Cache read error:", err);
       }
 
       setLoading(true);
       try {
         const url = await GeminiService.generateImage(prompt, aspectRatio);
         setImageUrl(url);
-        localStorage.setItem(cacheKey, url);
-      } catch (err) {
+        try {
+          await set(cacheKey, url);
+        } catch (err) {
+          console.error("Cache write error:", err);
+        }
+      } catch (err: any) {
         console.error(err);
+        if (err.message === "AUTH_ERROR" || err.message === "API_KEY_MISSING") {
+          onAuthError();
+        }
         setError(true);
       } finally {
         setLoading(false);
@@ -212,7 +224,7 @@ const GeneratedImage = ({ prompt, aspectRatio, className, fallback }: { prompt: 
     };
 
     fetchImage();
-  }, [prompt, aspectRatio]);
+  }, [prompt, aspectRatio, onAuthError]);
 
   if (loading) {
     return (
@@ -235,18 +247,37 @@ export default function App() {
 
   useEffect(() => {
     const checkKey = async () => {
-      const selected = await window.aistudio.hasSelectedApiKey();
-      setHasApiKey(selected);
+      try {
+        const selected = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(selected);
+      } catch (err) {
+        console.error("Error checking API key:", err);
+        setHasApiKey(false);
+      }
     };
     checkKey();
   }, []);
 
   const handleSelectKey = async () => {
-    await window.aistudio.openSelectKey();
-    setHasApiKey(true);
+    try {
+      await window.aistudio.openSelectKey();
+      // After opening, we assume success or let the user try again if it fails
+      setHasApiKey(true);
+    } catch (err) {
+      console.error("Error opening key selector:", err);
+    }
   };
 
-  if (hasApiKey === null) return null;
+  const handleAuthError = () => {
+    setHasApiKey(false);
+    import('idb-keyval').then(({ clear }) => clear());
+  };
+
+  if (hasApiKey === null) return (
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+    </div>
+  );
 
   if (!hasApiKey) {
     return (
@@ -425,6 +456,7 @@ export default function App() {
                         aspectRatio="3:4"
                         fallback="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
                         className="aspect-2/3 w-full rounded-xl bg-gray-700/5 object-cover shadow-lg"
+                        onAuthError={handleAuthError}
                       />
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10 ring-inset" />
                     </div>
@@ -436,6 +468,7 @@ export default function App() {
                         aspectRatio="3:4"
                         fallback="https://images.unsplash.com/photo-1485217988980-11786ced9454?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
                         className="aspect-2/3 w-full rounded-xl bg-gray-700/5 object-cover shadow-lg"
+                        onAuthError={handleAuthError}
                       />
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10 ring-inset" />
                     </div>
@@ -445,6 +478,7 @@ export default function App() {
                         aspectRatio="3:4"
                         fallback="https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&crop=focalpoint&fp-x=.4&w=396&h=528&q=80"
                         className="aspect-2/3 w-full rounded-xl bg-gray-700/5 object-cover shadow-lg"
+                        onAuthError={handleAuthError}
                       />
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10 ring-inset" />
                     </div>
@@ -456,6 +490,7 @@ export default function App() {
                         aspectRatio="3:4"
                         fallback="https://images.unsplash.com/photo-1670272504528-790c24957dda?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&crop=left&w=400&h=528&q=80"
                         className="aspect-2/3 w-full rounded-xl bg-gray-700/5 object-cover shadow-lg"
+                        onAuthError={handleAuthError}
                       />
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10 ring-inset" />
                     </div>
@@ -465,6 +500,7 @@ export default function App() {
                         aspectRatio="3:4"
                         fallback="https://images.unsplash.com/photo-1670272505284-8faba1c31f7d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
                         className="aspect-2/3 w-full rounded-xl bg-gray-700/5 object-cover shadow-lg"
+                        onAuthError={handleAuthError}
                       />
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10 ring-inset" />
                     </div>

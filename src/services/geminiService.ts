@@ -4,8 +4,11 @@ export class GeminiService {
   private static ai: any = null;
 
   private static getAI() {
-    // Create a new instance right before use to get the latest API key
-    return new GoogleGenAI({ apiKey: process.env.API_KEY || process.env.GEMINI_API_KEY });
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      throw new Error("API_KEY_MISSING");
+    }
+    return new GoogleGenAI({ apiKey });
   }
 
   static async generateImage(prompt: string, aspectRatio: "1:1" | "3:4" | "4:3" | "9:16" | "16:9" | "1:4" | "1:8" | "4:1" | "8:1" = "3:4") {
@@ -28,14 +31,21 @@ export class GeminiService {
         },
       });
 
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          return `data:image/png;base64,${part.inlineData.data}`;
+      if (response.candidates && response.candidates[0].content.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            return `data:image/png;base64,${part.inlineData.data}`;
+          }
         }
       }
-      throw new Error("No image part found in response");
-    } catch (error) {
+      throw new Error("NO_IMAGE_PART");
+    } catch (error: any) {
       console.error("Image generation failed:", error);
+      // Check for permission or not found errors to trigger key re-selection
+      const errorMsg = error?.message || "";
+      if (errorMsg.includes("403") || errorMsg.includes("404") || errorMsg.includes("permission") || errorMsg.includes("not found")) {
+        throw new Error("AUTH_ERROR");
+      }
       throw error;
     }
   }
