@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Dialog, DialogPanel } from '@headlessui/react'
+import { Dialog, DialogPanel, Transition } from '@headlessui/react'
+import { Fragment } from 'react'
 import { Bars3Icon, XMarkIcon, BuildingOffice2Icon, EnvelopeIcon, PhoneIcon } from '@heroicons/react/24/outline'
 import { get, set } from 'idb-keyval';
 import { GeminiService } from './services/geminiService';
@@ -39,7 +40,12 @@ import {
   Users, 
   Award, 
   Handshake,
-  ArrowRight
+  ArrowRight,
+  IdCard,
+  Mail,
+  MapPin,
+  Building2,
+  Map
 } from 'lucide-react';
 
 // --- Mock Data ---
@@ -241,9 +247,281 @@ const GeneratedImage = ({ prompt, aspectRatio, className, fallback, onAuthError 
   return <img src={imageUrl} alt={prompt} className={className} referrerPolicy="no-referrer" />;
 };
 
+const GeneratedLogo = ({ company, className, fallback, onAuthError }: { company: string, className?: string, fallback: string, onAuthError: () => void }) => {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const fetchImage = async () => {
+      const cacheKey = `gen_logo_v2_${company.replace(/\s+/g, '_')}`;
+      try {
+        const cached = await get(cacheKey);
+        if (cached) {
+          setImageUrl(cached);
+          return;
+        }
+      } catch (err) {
+        console.error("Cache read error:", err);
+      }
+
+      setLoading(true);
+      try {
+        const url = await GeminiService.generateLogo(company);
+        setImageUrl(url);
+        try {
+          await set(cacheKey, url);
+        } catch (err) {
+          console.error("Cache write error:", err);
+        }
+      } catch (err: any) {
+        console.error(err);
+        if (err.message === "AUTH_ERROR" || err.message === "API_KEY_MISSING") {
+          onAuthError();
+        }
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchImage();
+  }, [company, onAuthError]);
+
+  if (loading) {
+    return (
+      <div className={`${className} bg-gray-800/50 animate-pulse flex items-center justify-center rounded-lg`}>
+        <div className="text-indigo-400 text-[10px] font-mono">GEN...</div>
+      </div>
+    );
+  }
+
+  if (error || !imageUrl) {
+    return <img src={fallback} alt={company} className={className} referrerPolicy="no-referrer" />;
+  }
+
+  return <img src={imageUrl} alt={company} className={`${className} mix-blend-screen grayscale contrast-200 brightness-150`} referrerPolicy="no-referrer" />;
+};
+
+function CustomerAgreementModal({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (val: boolean) => void }) {
+  return (
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black/80" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className="w-full max-w-5xl transform overflow-hidden rounded-lg bg-[#232936] text-left align-middle shadow-xl transition-all">
+                {/* Header */}
+                <div className="bg-[#0066ff] px-8 py-4">
+                  <h3 className="text-lg font-semibold text-white">
+                    24/7 Emergency Response
+                  </h3>
+                </div>
+
+                {/* Form Body */}
+                <div className="px-8 py-8">
+                  <form className="space-y-6">
+                    {/* Row 1 */}
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                          <span className="text-red-500 mr-1">*</span>FIRST NAME
+                        </label>
+                        <div className="relative">
+                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <IdCard className="h-5 w-5 text-gray-500" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="First Name"
+                            className="block w-full rounded-md border-0 bg-[#313846] py-3 pl-10 pr-3 text-white placeholder:text-gray-500 ring-1 ring-inset ring-white/5 focus:ring-2 focus:ring-inset focus:ring-[#0066ff] sm:text-sm sm:leading-6"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                          <span className="text-red-500 mr-1">*</span>LAST NAME
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Last Name"
+                            className="block w-full rounded-md border-0 bg-[#313846] py-3 px-4 text-white placeholder:text-gray-500 ring-1 ring-inset ring-white/5 focus:ring-2 focus:ring-inset focus:ring-[#0066ff] sm:text-sm sm:leading-6"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 2 */}
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                          <span className="text-red-500 mr-1">*</span>EMAIL ADDRESS
+                        </label>
+                        <div className="relative">
+                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Mail className="h-5 w-5 text-gray-500" />
+                          </div>
+                          <input
+                            type="email"
+                            placeholder="Email"
+                            className="block w-full rounded-md border-0 bg-[#313846] py-3 pl-10 pr-3 text-white placeholder:text-gray-500 ring-1 ring-inset ring-white/5 focus:ring-2 focus:ring-inset focus:ring-[#0066ff] sm:text-sm sm:leading-6"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                          <span className="text-red-500 mr-1">*</span>PHONE NUMBER
+                        </label>
+                        <div className="relative flex rounded-md bg-[#313846] ring-1 ring-inset ring-white/5 focus-within:ring-2 focus-within:ring-inset focus-within:ring-[#0066ff]">
+                          <div className="flex items-center pl-3 pr-2 border-r border-gray-600">
+                            <span className="text-lg mr-2">🇺🇸</span>
+                            <span className="text-white text-sm">+1</span>
+                          </div>
+                          <div className="pointer-events-none absolute inset-y-0 left-[70px] flex items-center pl-3">
+                            <Phone className="h-5 w-5 text-gray-500" />
+                          </div>
+                          <input
+                            type="tel"
+                            placeholder="Phone Number"
+                            className="block w-full rounded-r-md border-0 bg-transparent py-3 pl-12 pr-3 text-white placeholder:text-gray-500 focus:ring-0 sm:text-sm sm:leading-6"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 3 */}
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                          <span className="text-red-500 mr-1">*</span>ADDRESS LINE 1
+                        </label>
+                        <div className="relative">
+                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <MapPin className="h-5 w-5 text-gray-500" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Address Line"
+                            className="block w-full rounded-md border-0 bg-[#313846] py-3 pl-10 pr-3 text-white placeholder:text-gray-500 ring-1 ring-inset ring-white/5 focus:ring-2 focus:ring-inset focus:ring-[#0066ff] sm:text-sm sm:leading-6"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                          ADDRESS LINE 2
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Address Line 2"
+                            className="block w-full rounded-md border-0 bg-[#313846] py-3 px-4 text-white placeholder:text-gray-500 ring-1 ring-inset ring-white/5 focus:ring-2 focus:ring-inset focus:ring-[#0066ff] sm:text-sm sm:leading-6"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 4 */}
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                          <span className="text-red-500 mr-1">*</span>CITY
+                        </label>
+                        <div className="relative">
+                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Building2 className="h-5 w-5 text-gray-500" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="City Name"
+                            className="block w-full rounded-md border-0 bg-[#313846] py-3 pl-10 pr-3 text-white placeholder:text-gray-500 ring-1 ring-inset ring-white/5 focus:ring-2 focus:ring-inset focus:ring-[#0066ff] sm:text-sm sm:leading-6"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                          <span className="text-red-500 mr-1">*</span>STATE
+                        </label>
+                        <div className="relative">
+                          <select
+                            className="block w-full appearance-none rounded-md border-0 bg-[#313846] py-3 pl-4 pr-10 text-gray-500 ring-1 ring-inset ring-white/5 focus:ring-2 focus:ring-inset focus:ring-[#0066ff] sm:text-sm sm:leading-6"
+                            defaultValue=""
+                          >
+                            <option value="" disabled>Choose State...</option>
+                            <option value="VA">Virginia</option>
+                            <option value="MD">Maryland</option>
+                            <option value="DC">Washington D.C.</option>
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                            <ChevronDown className="h-5 w-5 text-gray-500" />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                          <span className="text-red-500 mr-1">*</span>ZIP CODE
+                        </label>
+                        <div className="relative">
+                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Map className="h-5 w-5 text-gray-500" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Zip Code"
+                            className="block w-full rounded-md border-0 bg-[#313846] py-3 pl-10 pr-3 text-white placeholder:text-gray-500 ring-1 ring-inset ring-white/5 focus:ring-2 focus:ring-inset focus:ring-[#0066ff] sm:text-sm sm:leading-6"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="pt-4">
+                      <button
+                        type="button"
+                        className="group inline-flex items-center justify-center rounded-md bg-[#ff0000] px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-300 hover:bg-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        Submit
+                        <span aria-hidden="true" className="max-w-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:max-w-[24px] group-hover:ml-2 group-hover:opacity-100 group-hover:translate-x-1">
+                          →
+                        </span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </div>
+      </Dialog>
+    </Transition>
+  )
+}
+
 export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const checkKey = async () => {
@@ -437,14 +715,17 @@ export default function App() {
                     amet fugiat veniam occaecat fugiat aliqua. Anim aute id magna aliqua ad ad non deserunt sunt.
                   </p>
                   <div className="mt-10 flex items-center gap-x-6">
-                    <a
-                      href="#"
-                      className="rounded-md bg-indigo-500 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                    <button
+                      onClick={() => setIsModalOpen(true)}
+                      className="group inline-flex items-center justify-center rounded-md bg-indigo-500 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 cursor-pointer"
                     >
-                      Get started
-                    </a>
-                    <a href="#" className="text-sm/6 font-semibold text-white">
-                      Live demo <span aria-hidden="true">→</span>
+                      Request Services
+                      <span aria-hidden="true" className="max-w-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:max-w-[24px] group-hover:ml-2 group-hover:opacity-100 group-hover:translate-x-1">
+                        →
+                      </span>
+                    </button>
+                    <a href="#" className="group text-sm/6 font-semibold text-white">
+                      View services <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-x-1.5">→</span>
                     </a>
                   </div>
                 </div>
@@ -515,46 +796,43 @@ export default function App() {
       {/* 2. Logo Cloud */}
       <div className="bg-gray-900 py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <h2 className="text-center text-lg/8 font-semibold text-white">Trusted by the world’s most innovative teams</h2>
-          <div className="mx-auto mt-10 grid max-w-lg grid-cols-4 items-center gap-x-8 gap-y-10 sm:max-w-xl sm:grid-cols-6 sm:gap-x-10 lg:mx-0 lg:max-w-none lg:grid-cols-5">
+          <h2 className="text-center text-lg/8 font-semibold text-white">Trusted by major insurance providers</h2>
+          <div className="mx-auto mt-10 grid max-w-lg grid-cols-2 items-center gap-x-8 gap-y-10 sm:max-w-xl sm:grid-cols-3 sm:gap-x-10 lg:mx-0 lg:max-w-none lg:grid-cols-6">
             <img
-              alt="Transistor"
-              src="https://tailwindcss.com/plus-assets/img/logos/158x48/transistor-logo-white.svg"
-              width={158}
-              height={48}
-              className="col-span-2 max-h-12 w-full object-contain lg:col-span-1"
+              alt="USAA"
+              src="https://upload.wikimedia.org/wikipedia/commons/c/ca/USAA_logo.svg"
+              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
+              referrerPolicy="no-referrer"
             />
-
             <img
-              alt="Reform"
-              src="https://tailwindcss.com/plus-assets/img/logos/158x48/reform-logo-white.svg"
-              width={158}
-              height={48}
-              className="col-span-2 max-h-12 w-full object-contain lg:col-span-1"
+              alt="State Farm"
+              src="https://upload.wikimedia.org/wikipedia/commons/7/75/State_Farm_logo.svg"
+              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
+              referrerPolicy="no-referrer"
             />
-
             <img
-              alt="Tuple"
-              src="https://tailwindcss.com/plus-assets/img/logos/158x48/tuple-logo-white.svg"
-              width={158}
-              height={48}
-              className="col-span-2 max-h-12 w-full object-contain lg:col-span-1"
+              alt="Allstate"
+              src="https://upload.wikimedia.org/wikipedia/commons/0/07/Allstate_logo.svg"
+              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
+              referrerPolicy="no-referrer"
             />
-
             <img
-              alt="SavvyCal"
-              src="https://tailwindcss.com/plus-assets/img/logos/158x48/savvycal-logo-white.svg"
-              width={158}
-              height={48}
-              className="col-span-2 max-h-12 w-full object-contain sm:col-start-2 lg:col-span-1"
+              alt="Travelers"
+              src="https://upload.wikimedia.org/wikipedia/commons/c/c5/Travelers_logo.svg"
+              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
+              referrerPolicy="no-referrer"
             />
-
             <img
-              alt="Statamic"
-              src="https://tailwindcss.com/plus-assets/img/logos/158x48/statamic-logo-white.svg"
-              width={158}
-              height={48}
-              className="col-span-2 col-start-2 max-h-12 w-full object-contain sm:col-start-auto lg:col-span-1"
+              alt="CHUBB"
+              src="https://upload.wikimedia.org/wikipedia/commons/d/d4/Chubb_logo.svg"
+              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
+              referrerPolicy="no-referrer"
+            />
+            <img
+              alt="AIG"
+              src="https://upload.wikimedia.org/wikipedia/commons/e/e3/AIG_logo.svg"
+              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
+              referrerPolicy="no-referrer"
             />
           </div>
         </div>
@@ -920,6 +1198,7 @@ export default function App() {
           </form>
         </div>
       </div>
+      <CustomerAgreementModal isOpen={isModalOpen} setIsOpen={setIsModalOpen} />
     </div>
   );
 }

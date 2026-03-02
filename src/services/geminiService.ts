@@ -49,4 +49,42 @@ export class GeminiService {
       throw error;
     }
   }
+
+  static async generateLogo(company: string) {
+    try {
+      const ai = this.getAI();
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-image-preview',
+        contents: {
+          parts: [
+            {
+              text: `A minimalist, flat, solid white corporate logo for ${company}. HORIZONTAL LAYOUT ONLY: a simple icon on the far left, and the brand name text on the right. Pure pitch black background (#000000), no boxes, no borders, no gradients. Clean sans-serif typography, high contrast, 2D vector style.`,
+            },
+          ],
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: "4:1",
+            imageSize: "1K"
+          },
+        },
+      });
+
+      if (response.candidates && response.candidates[0].content.parts) {
+        for (const part of response.candidates[0].content.parts) {
+          if (part.inlineData) {
+            return `data:image/png;base64,${part.inlineData.data}`;
+          }
+        }
+      }
+      throw new Error("NO_IMAGE_PART");
+    } catch (error: any) {
+      console.error("Logo generation failed:", error);
+      const errorMsg = error?.message || "";
+      if (errorMsg.includes("403") || errorMsg.includes("404") || errorMsg.includes("permission") || errorMsg.includes("not found")) {
+        throw new Error("AUTH_ERROR");
+      }
+      throw error;
+    }
+  }
 }
