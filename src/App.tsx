@@ -3,10 +3,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Dialog, DialogPanel } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon, BuildingOffice2Icon, EnvelopeIcon, PhoneIcon } from '@heroicons/react/24/outline'
+import { GeminiService } from './services/geminiService';
+
+declare global {
+  interface Window {
+    aistudio: {
+      hasSelectedApiKey: () => Promise<boolean>;
+      openSelectKey: () => Promise<void>;
+    };
+  }
+}
 import {
   ArrowPathIcon,
   CloudArrowUpIcon,
@@ -174,8 +184,91 @@ const FAQAccordion = ({ items }: { items: typeof faqs }) => {
   );
 };
 
+const GeneratedImage = ({ prompt, aspectRatio, className, fallback }: { prompt: string, aspectRatio: any, className?: string, fallback: string }) => {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const fetchImage = async () => {
+      const cacheKey = `gen_img_${prompt.replace(/\s+/g, '_')}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        setImageUrl(cached);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const url = await GeminiService.generateImage(prompt, aspectRatio);
+        setImageUrl(url);
+        localStorage.setItem(cacheKey, url);
+      } catch (err) {
+        console.error(err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchImage();
+  }, [prompt, aspectRatio]);
+
+  if (loading) {
+    return (
+      <div className={`${className} bg-gray-800 animate-pulse flex items-center justify-center`}>
+        <div className="text-indigo-400 text-xs font-mono">GENERATING...</div>
+      </div>
+    );
+  }
+
+  if (error || !imageUrl) {
+    return <img src={fallback} alt={prompt} className={className} referrerPolicy="no-referrer" />;
+  }
+
+  return <img src={imageUrl} alt={prompt} className={className} referrerPolicy="no-referrer" />;
+};
+
 export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkKey = async () => {
+      const selected = await window.aistudio.hasSelectedApiKey();
+      setHasApiKey(selected);
+    };
+    checkKey();
+  }, []);
+
+  const handleSelectKey = async () => {
+    await window.aistudio.openSelectKey();
+    setHasApiKey(true);
+  };
+
+  if (hasApiKey === null) return null;
+
+  if (!hasApiKey) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md">
+          <h1 className="text-3xl font-bold text-white mb-4">API Key Required</h1>
+          <p className="text-gray-400 mb-8">
+            To generate high-quality restoration images using Gemini 3.1 Flash, you need to select a paid Google Cloud API key.
+          </p>
+          <button
+            onClick={handleSelectKey}
+            className="rounded-md bg-indigo-500 px-6 py-3 text-lg font-semibold text-white shadow-sm hover:bg-indigo-400 transition-all"
+          >
+            Select API Key
+          </button>
+          <p className="mt-4 text-sm text-gray-500 italic">
+            Note: You must have billing enabled on your Google Cloud project.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-300 selection:bg-indigo-500/30">
@@ -327,9 +420,10 @@ export default function App() {
                 <div className="mt-14 flex justify-end gap-8 sm:-mt-44 sm:justify-start sm:pl-20 lg:mt-0 lg:pl-0">
                   <div className="ml-auto w-44 flex-none space-y-8 pt-32 sm:ml-0 sm:pt-80 lg:order-last lg:pt-36 xl:order-0 xl:pt-80">
                     <div className="relative">
-                      <img
-                        alt=""
-                        src="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
+                      <GeneratedImage
+                        prompt="Professional water damage restoration technician using a high-powered water extractor in a flooded modern basement"
+                        aspectRatio="3:4"
+                        fallback="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
                         className="aspect-2/3 w-full rounded-xl bg-gray-700/5 object-cover shadow-lg"
                       />
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10 ring-inset" />
@@ -337,17 +431,19 @@ export default function App() {
                   </div>
                   <div className="mr-auto w-44 flex-none space-y-8 sm:mr-0 sm:pt-52 lg:pt-36">
                     <div className="relative">
-                      <img
-                        alt=""
-                        src="https://images.unsplash.com/photo-1485217988980-11786ced9454?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
+                      <GeneratedImage
+                        prompt="A charred, fire-damaged living room being meticulously inspected by a restoration expert in professional gear"
+                        aspectRatio="3:4"
+                        fallback="https://images.unsplash.com/photo-1485217988980-11786ced9454?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
                         className="aspect-2/3 w-full rounded-xl bg-gray-700/5 object-cover shadow-lg"
                       />
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10 ring-inset" />
                     </div>
                     <div className="relative">
-                      <img
-                        alt=""
-                        src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&crop=focalpoint&fp-x=.4&w=396&h=528&q=80"
+                      <GeneratedImage
+                        prompt="Close-up of professional mold remediation, a technician in a white hazmat suit cleaning a wall"
+                        aspectRatio="3:4"
+                        fallback="https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&crop=focalpoint&fp-x=.4&w=396&h=528&q=80"
                         className="aspect-2/3 w-full rounded-xl bg-gray-700/5 object-cover shadow-lg"
                       />
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10 ring-inset" />
@@ -355,17 +451,19 @@ export default function App() {
                   </div>
                   <div className="w-44 flex-none space-y-8 pt-32 sm:pt-0">
                     <div className="relative">
-                      <img
-                        alt=""
-                        src="https://images.unsplash.com/photo-1670272504528-790c24957dda?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&crop=left&w=400&h=528&q=80"
+                      <GeneratedImage
+                        prompt="Storm damage restoration, a professional crew tarping a damaged roof of a luxury home during twilight"
+                        aspectRatio="3:4"
+                        fallback="https://images.unsplash.com/photo-1670272504528-790c24957dda?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&crop=left&w=400&h=528&q=80"
                         className="aspect-2/3 w-full rounded-xl bg-gray-700/5 object-cover shadow-lg"
                       />
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10 ring-inset" />
                     </div>
                     <div className="relative">
-                      <img
-                        alt=""
-                        src="https://images.unsplash.com/photo-1670272505284-8faba1c31f7d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
+                      <GeneratedImage
+                        prompt="Flood damage scene, a restoration truck parked in front of a beautiful house with receding flood waters"
+                        aspectRatio="3:4"
+                        fallback="https://images.unsplash.com/photo-1670272505284-8faba1c31f7d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
                         className="aspect-2/3 w-full rounded-xl bg-gray-700/5 object-cover shadow-lg"
                       />
                       <div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-white/10 ring-inset" />
