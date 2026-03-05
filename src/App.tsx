@@ -798,41 +798,41 @@ export default function App() {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <h2 className="text-center text-lg/8 font-semibold text-white">Trusted by major insurance providers</h2>
           <div className="mx-auto mt-10 grid max-w-lg grid-cols-2 items-center gap-x-8 gap-y-10 sm:max-w-xl sm:grid-cols-3 sm:gap-x-10 lg:mx-0 lg:max-w-none lg:grid-cols-6">
-            <img
-              alt="USAA"
-              src="https://upload.wikimedia.org/wikipedia/commons/c/ca/USAA_logo.svg"
-              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
-              referrerPolicy="no-referrer"
+            <GeneratedLogo
+              company="USAA"
+              fallback="https://tailwindcss.com/plus-assets/img/logos/158x48/transistor-logo-white.svg"
+              className="col-span-1 max-h-12 w-full object-contain"
+              onAuthError={handleAuthError}
             />
-            <img
-              alt="State Farm"
-              src="https://upload.wikimedia.org/wikipedia/commons/7/75/State_Farm_logo.svg"
-              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
-              referrerPolicy="no-referrer"
+            <GeneratedLogo
+              company="State Farm"
+              fallback="https://tailwindcss.com/plus-assets/img/logos/158x48/reform-logo-white.svg"
+              className="col-span-1 max-h-12 w-full object-contain"
+              onAuthError={handleAuthError}
             />
-            <img
-              alt="Allstate"
-              src="https://upload.wikimedia.org/wikipedia/commons/0/07/Allstate_logo.svg"
-              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
-              referrerPolicy="no-referrer"
+            <GeneratedLogo
+              company="Allstate"
+              fallback="https://tailwindcss.com/plus-assets/img/logos/158x48/tuple-logo-white.svg"
+              className="col-span-1 max-h-12 w-full object-contain"
+              onAuthError={handleAuthError}
             />
-            <img
-              alt="Travelers"
-              src="https://upload.wikimedia.org/wikipedia/commons/c/c5/Travelers_logo.svg"
-              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
-              referrerPolicy="no-referrer"
+            <GeneratedLogo
+              company="Nationwide"
+              fallback="https://tailwindcss.com/plus-assets/img/logos/158x48/savvycal-logo-white.svg"
+              className="col-span-1 max-h-12 w-full object-contain"
+              onAuthError={handleAuthError}
             />
-            <img
-              alt="CHUBB"
-              src="https://upload.wikimedia.org/wikipedia/commons/d/d4/Chubb_logo.svg"
-              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
-              referrerPolicy="no-referrer"
+            <GeneratedLogo
+              company="Travelers"
+              fallback="https://tailwindcss.com/plus-assets/img/logos/158x48/statamic-logo-white.svg"
+              className="col-span-1 max-h-12 w-full object-contain"
+              onAuthError={handleAuthError}
             />
-            <img
-              alt="AIG"
-              src="https://upload.wikimedia.org/wikipedia/commons/e/e3/AIG_logo.svg"
-              className="col-span-1 max-h-12 w-full object-contain brightness-0 invert"
-              referrerPolicy="no-referrer"
+            <GeneratedLogo
+              company="CHUBB"
+              fallback="https://tailwindcss.com/plus-assets/img/logos/158x48/transistor-logo-white.svg"
+              className="col-span-1 max-h-12 w-full object-contain"
+              onAuthError={handleAuthError}
             />
           </div>
         </div>
